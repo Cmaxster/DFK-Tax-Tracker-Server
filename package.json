@@ -8,6 +8,7 @@
   "dependencies": {
     "@harmony-js/core": "^0.1.57",
     "abi-decoder": "^2.4.0",
+    "cors": "^2.8.5",
     "express": "^4.17.3",
     "unirest": "^0.6.0",
     "web3": "^1.7.1"
