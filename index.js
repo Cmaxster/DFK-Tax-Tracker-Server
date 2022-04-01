@@ -1,11 +1,11 @@
 const express = require('express');
 const unirest = require("unirest");
+const axios = require("axios");
 const abiDecoder = require('abi-decoder');
 var Web3 = require('web3');
 var cors = require('cors');
 
 const app = express();
-const web3 = new Web3('https://api.harmony.one');
 
 // Defi Kingdoms API definitions
 const HeroesAbi = require('./assets/abi/Heroes.abi.json');
@@ -26,6 +26,7 @@ const USV2Router = require('./assets/abi/IUniswapV2Router02.abi.json');
 
 app.use(cors()) // cross domain policy
 
+// Load up ABIs
 abiDecoder.addABI(HeroesAbi);
 abiDecoder.addABI(BankAbi);
 abiDecoder.addABI(ERC20Abi);
@@ -41,28 +42,72 @@ abiDecoder.addABI(JewelAbi);
 abiDecoder.addABI(ProfileAbi);
 abiDecoder.addABI(USV3Abi);
 abiDecoder.addABI(USV2Router);
-//const transactionHash = '0x86606a47b515861ec1461353c35f838b672e5f2c64ea336ba759fd303bc75b54'
-//console.log('>> decoded ABI = ',decodedDataTwo);
 
-app.get("/decode/:transaction", (req, res, next) => {
-  console.log ('///////////////////////////////////////////////////////////////')
-  console.log('>> received request : ',req.params.transaction)
-  let decodedData = abiDecoder.decodeMethod(req.params.transaction);
-  console.log('>> decoded request: ',decodedData)
+// decode an isolated piece of a transaction
+app.get("/decode/:hex", (req, res, next) => {
+  //console.log ('///////////////////////////////////////////////////////////////')
+  //console.log('>> received request : ',req.params.hex)
+  let decodedData = abiDecoder.decodeMethod(req.params.hex);
+  //console.log('>> decoded request: ',decodedData)
   res.send(decodedData);
- })
-  
-  // const receipt =  web3.eth.getTransactionReceipt(transactionHash).then((res)=>{
-  //   let logs = res.logs;
-  //   const decodedLogs = abiDecoder.decodeLogs(logs);
-  //   console.log('>> decoded logs = ',decodedLogs)
-    
-  // log = res.logs[0];
-  // console.log('>> log = ',log)
-  // smartContract = log.address;
-  // console.log ('>> address = ', smartContract)
+})
 
-  // })
+// pull wallet transactions
+app.get("/transactions/:wallet", (req, res, next) => {
+  axios({
+    method: 'post',
+    url: 'https://api.harmony.one',
+    headers: { 'Content-Type' : 'application/json' },
+    data: JSON.stringify({
+        "jsonrpc": "2.0",
+        "method": "hmyv2_getTransactionsHistory",
+        "params": [{
+          "address": "0xc6cc22EFDCcDd3f06ce9588798CA2f001EbdEe31",
+          "pageIndex": 0,
+          "pageSize": 1000,
+          "fullTx": true,
+          "txType": "ALL",
+          "order": "DESC"
+        }],
+        "id": 1
+      })
+    })
+    .then(function (response) {
+      console.log('>> Axios get transactions SUCCESS --> ',response.data.result);
+      setTransactions([...response.data.result.transactions])
+    })
+    .catch(function (error) {
+      console.log(">> Error axios get transactions: ",error);
+    });
+})
+ 
+// retrieve a transaction receipt
+app.get("/receipt/:transaction", (req, res, next) => {
+  console.log ('///////////////////////////////////////////////////////////////')
+  console.log('>> received receipt request for tx: ',req.params.transaction)
+
+  var receiptData;
+  // call to the BlockChain API
+  axios({
+    method: 'post',
+    url: 'https://api.harmony.one',
+    headers: { 'Content-Type' : 'application/json' },
+    data: JSON.stringify({
+        "jsonrpc": "2.0",
+        "method": "hmy_getTransactionReceipt",
+        "params": [req.params.transaction],
+        "id": 1
+      })
+    })
+    .then(function (response) {
+      console.log(">> transaction receipt call successful, data retrieved: ",response.data.result)
+      receiptData = response.data.result;
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+  res.send(receiptData);
+ })
 
 app.listen(3001, () => {
   console.log("Server running on port 3001");
