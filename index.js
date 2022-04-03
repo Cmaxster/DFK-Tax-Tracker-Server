@@ -53,7 +53,8 @@ app.get("/decode/:hex", (req, res, next) => {
 })
 
 // pull wallet transactions
-app.get("/transactions/:wallet", (req, res, next) => {
+app.get("/transactions/:address", (req, res, next) => {
+  var transactionData;
   axios({
     method: 'post',
     url: 'https://api.harmony.one',
@@ -62,7 +63,7 @@ app.get("/transactions/:wallet", (req, res, next) => {
         "jsonrpc": "2.0",
         "method": "hmyv2_getTransactionsHistory",
         "params": [{
-          "address": "0xc6cc22EFDCcDd3f06ce9588798CA2f001EbdEe31",
+          "address": req.params.address,
           "pageIndex": 0,
           "pageSize": 1000,
           "fullTx": true,
@@ -74,11 +75,13 @@ app.get("/transactions/:wallet", (req, res, next) => {
     })
     .then(function (response) {
       console.log('>> Axios get transactions SUCCESS --> ',response.data.result);
-      setTransactions([...response.data.result.transactions])
-    })
-    .catch(function (error) {
+      transactionData = response.data.result;
+      res.send(transactionData);
+    }).catch(function (error) {
       console.log(">> Error axios get transactions: ",error);
+      return;
     });
+    
 })
  
 // retrieve a transaction receipt
@@ -112,3 +115,16 @@ app.get("/receipt/:transaction", (req, res, next) => {
 app.listen(3001, () => {
   console.log("Server running on port 3001");
  });
+
+
+
+
+
+
+
+
+
+
+
+
+ 
