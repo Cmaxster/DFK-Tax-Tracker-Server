@@ -56,7 +56,6 @@ app.get("/decode/:hex", (req, res, next) => {
 
 // pull wallet transactions
 app.get("/transactions/:address", (req, res, next) => {
-  var transactionData;
   axios({
     method: 'post',
     url: 'https://api.harmony.one',
@@ -77,72 +76,30 @@ app.get("/transactions/:address", (req, res, next) => {
     })
     .then(function (response) {
       console.log('>> Axios get transactions SUCCESS --! ');
-      transactionData = response.data.result;
-      processTxData(response.data.result);
+      const transactionData = await processTxData(response.data.result); 
+      // await throwing error  'await is only valid in async function', but processTxData is async.. what's happening here?
+      // my  understanding is res.send won't execute until promise is passed and await is cleared, seems to be executing immediately..
+      console.log('>> transactionData after processing : ',transactionData[0]) //console logging 'undefined' even though I have a lot of 'await' in place
       res.send(transactionData);
     }).catch(function (error) {
-      console.log(">> Error axios get transactions: ",error);
-      return;
+      console.log(">> Axios encountered an error when fetching transactions: ",error);
+      return error;
     });
     
 })
- 
-// retrieve a transaction receipt
-/*
-app.get("/receipt/:transaction", (req, res, next) => {
-  console.log ('///////////////////////////////////////////////////////////////')
-  console.log('>> received receipt request for tx: ',req.params.transaction)
-
-  var receiptData;
-  // call to the BlockChain API
-  axios({
-    method: 'post',
-    url: 'https://api.harmony.one',
-    headers: { 'Content-Type' : 'application/json' },
-    data: JSON.stringify({
-        "jsonrpc": "2.0",
-        "method": "hmy_getTransactionReceipt",
-        "params": [req.params.transaction],
-        "id": 1
-      })
-    })
-    .then(function (response) {
-      console.log(">> transaction receipt call successful, data retrieved: ",response.data.result)
-      receiptData = response.data.result;
-    })
-    .catch(function (error) {
-      console.log(error);
-    });
-  res.send(receiptData);
- })
-*/
-
-app.listen(3001, () => {
-  console.log("Server running on port 3001");
- });
-
- var receiptCalls = [];
 
 const processTxData = async (rawData) => {
   console.log('>> Attempting to process data..');
   processedData = [...rawData.transactions];
   console.log('>> Processed data [0] = ',processedData[0]);
 
-
-
+  // pull all the transactions, query API for receipts, and watch for result
+  // should be waiting?.. "await"
   const result = await Promise.all(processedData.map(async (tx) => {
     tx.receipt = await pullTxReceipt(tx.ethHash);
     return tx;
   }));
   return result;
-
-  console.log('>> After Processed data [0] = ',processedData[0].receipt);
-
-}
-
-const pullRxReceipts = () => {
-  return Promise.all()
-
 }
 
 const pullTxReceipt = (txHash) => {
@@ -152,50 +109,46 @@ const pullTxReceipt = (txHash) => {
     headers: { 'Content-Type' : 'application/json' },
     data: JSON.stringify({
         "jsonrpc": "2.0",
-        "method": "hmy_getTransactionReceipt",
-        "params": txHash,
+        "method": "hmyv2_getTransactionReceipt",
+        "params": [txHash],
         "id": 1
       })
     })
-    .then(function (response) {
-      //console.log('response.data.result = ',response.data)
-      return response.data;  
-    })
+    .then(function (response) { return response.data; })
     .catch(function (error) {
-      console.log('>> There was an error pulling TX reciept..');
+      console.log('>> There was an error pulling TX reciept:',txHash,' :',error);
       return error;
     })
 };
 
-
-
-
-/*
-
-let URLs= ["https://jsonplaceholder.typicode.com/posts/1", "https://jsonplaceholder.typicode.com/posts/2", "https://jsonplaceholder.typicode.com/posts/3"]
-
-function getAllData(URLs){
-  return Promise.all(URLs.map(fetchData));
-}
-
-function fetchData(URL) {
-  return axios
-    .get(URL)
-    .then(function(response) {
-      return {
-        success: true,
-        data: response.data
-      };
-    })
-    .catch(function(error) {
-      return { success: false };
-    });
-}
-
-getAllData(URLs).then(resp=>{console.log(resp)}).catch(e=>{console.log(e)})
-
-*/
-
-
-
+app.listen(3001, () => {
+  console.log("Server running on port 3001");
+ });
  
+
+// var data = JSON.stringify({
+//   "jsonrpc": "2.0",
+//   "id": 1,
+//   "method": "hmyv2_getTransactionReceipt",
+//   "params": [
+//     "0xd324cc57280411dfac5a7ec2987d0b83e25e27a3d5bb5d3531262387331d692b"
+//   ]
+// });
+
+// var config = {
+//   method: 'get',
+//   url: 'https://api.harmony.one',
+//   headers: { 
+//     'Content-Type': 'application/json', 
+//     'Cookie': 'DO-LB="MTAuMTE2LjAuOTo4NTAw"'
+//   },
+//   data : data
+// };
+
+// axios(config)
+// .then(function (response) {
+//   console.log(JSON.stringify(response.data));
+// })
+// .catch(function (error) {
+//   console.log(error);
+// });
