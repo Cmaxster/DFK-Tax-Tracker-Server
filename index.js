@@ -130,9 +130,11 @@ const processTxData = async (rawData) => {
 
 
 
-  processedData = processedData.map((tx) => {
-    receiptCalls.push(tx.receipt = pullTxReceipt(tx.ethHash))
-  });
+  const result = await Promise.all(processedData.map(async (tx) => {
+    tx.receipt = await pullTxReceipt(tx.ethHash);
+    return tx;
+  }));
+  return result;
 
   console.log('>> After Processed data [0] = ',processedData[0].receipt);
 
