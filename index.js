@@ -43,6 +43,8 @@ abiDecoder.addABI(ProfileAbi);
 abiDecoder.addABI(USV3Abi);
 abiDecoder.addABI(USV2Router);
 
+var processedData = {};
+
 // decode an isolated piece of a transaction
 app.get("/decode/:hex", (req, res, next) => {
   //console.log ('///////////////////////////////////////////////////////////////')
@@ -74,8 +76,9 @@ app.get("/transactions/:address", (req, res, next) => {
       })
     })
     .then(function (response) {
-      console.log('>> Axios get transactions SUCCESS --> ',response.data.result);
+      console.log('>> Axios get transactions SUCCESS --! ');
       transactionData = response.data.result;
+      processTxData(response.data.result);
       res.send(transactionData);
     }).catch(function (error) {
       console.log(">> Error axios get transactions: ",error);
@@ -85,6 +88,7 @@ app.get("/transactions/:address", (req, res, next) => {
 })
  
 // retrieve a transaction receipt
+/*
 app.get("/receipt/:transaction", (req, res, next) => {
   console.log ('///////////////////////////////////////////////////////////////')
   console.log('>> received receipt request for tx: ',req.params.transaction)
@@ -111,14 +115,47 @@ app.get("/receipt/:transaction", (req, res, next) => {
     });
   res.send(receiptData);
  })
+*/
 
 app.listen(3001, () => {
   console.log("Server running on port 3001");
  });
 
 
+const processTxData = (rawData) => {
+  console.log('>> Attempting to process data..');
+  processedData = [...rawData.transactions];
+  console.log('>> Processed data [0] = ',processedData[0]);
 
+  processedData.map((tx) => {
+    tx.receipt = await pullTxReceipt(tx.ethHash)
+  });
 
+  console.log('>> After Processed data [0] = ',processedData[0].receipt);
+
+}
+
+const pullTxReceipt = async (txHash) => {
+  axios({
+    method: 'post',
+    url: 'https://api.harmony.one',
+    headers: { 'Content-Type' : 'application/json' },
+    data: JSON.stringify({
+        "jsonrpc": "2.0",
+        "method": "hmy_getTransactionReceipt",
+        "params": txHash,
+        "id": 1
+      })
+    })
+    .then(function (response) {
+      //console.log('response.data.result = ',response.data)
+      return response.data;  
+    })
+    .catch(function (error) {
+      console.log('>> There was an error pulling TX reciept..');
+      return error;
+    })
+};
 
 
 
