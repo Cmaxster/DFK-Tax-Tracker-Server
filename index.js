@@ -121,22 +121,30 @@ app.listen(3001, () => {
   console.log("Server running on port 3001");
  });
 
+ var receiptCalls = [];
 
-const processTxData = (rawData) => {
+const processTxData = async (rawData) => {
   console.log('>> Attempting to process data..');
   processedData = [...rawData.transactions];
   console.log('>> Processed data [0] = ',processedData[0]);
 
-  processedData.map((tx) => {
-    tx.receipt = await pullTxReceipt(tx.ethHash)
+
+
+  processedData = processedData.map((tx) => {
+    receiptCalls.push(tx.receipt = pullTxReceipt(tx.ethHash))
   });
 
   console.log('>> After Processed data [0] = ',processedData[0].receipt);
 
 }
 
-const pullTxReceipt = async (txHash) => {
-  axios({
+const pullRxReceipts = () => {
+  return Promise.all()
+
+}
+
+const pullTxReceipt = (txHash) => {
+  return axios({
     method: 'post',
     url: 'https://api.harmony.one',
     headers: { 'Content-Type' : 'application/json' },
@@ -160,7 +168,31 @@ const pullTxReceipt = async (txHash) => {
 
 
 
+/*
 
+let URLs= ["https://jsonplaceholder.typicode.com/posts/1", "https://jsonplaceholder.typicode.com/posts/2", "https://jsonplaceholder.typicode.com/posts/3"]
+
+function getAllData(URLs){
+  return Promise.all(URLs.map(fetchData));
+}
+
+function fetchData(URL) {
+  return axios
+    .get(URL)
+    .then(function(response) {
+      return {
+        success: true,
+        data: response.data
+      };
+    })
+    .catch(function(error) {
+      return { success: false };
+    });
+}
+
+getAllData(URLs).then(resp=>{console.log(resp)}).catch(e=>{console.log(e)})
+
+*/
 
 
 
