@@ -47,10 +47,7 @@ var processedData = {};
 
 // decode an isolated piece of a transaction
 app.get("/decode/:hex", (req, res, next) => {
-  //console.log ('///////////////////////////////////////////////////////////////')
-  //console.log('>> received request : ',req.params.hex)
   let decodedData = abiDecoder.decodeMethod(req.params.hex);
-  //console.log('>> decoded request: ',decodedData)
   res.send(decodedData);
 })
 
@@ -76,10 +73,10 @@ app.get("/transactions/:address", (req, res, next) => {
     })
     .then(function (response) {
       console.log('>> Axios get transactions SUCCESS --! ');
-      const transactionData = await processTxData(response.data.result); 
-      // await throwing error  'await is only valid in async function', but processTxData is async.. what's happening here?
-      // my  understanding is res.send won't execute until promise is passed and await is cleared, seems to be executing immediately..
-      console.log('>> transactionData after processing : ',transactionData[0]) //console logging 'undefined' even though I have a lot of 'await' in place
+      const transactionData = processTxData(response.data.result); 
+      // console logging undefined despite having await on each promise..
+      console.log('>> transactionData after processing : ',transactionData[0]);
+      
       res.send(transactionData);
     }).catch(function (error) {
       console.log(">> Axios encountered an error when fetching transactions: ",error);
@@ -88,14 +85,14 @@ app.get("/transactions/:address", (req, res, next) => {
     
 })
 
-const processTxData = async (rawData) => {
+// process data.. add receipt to transaction data..
+const processTxData = (rawData) => {
   console.log('>> Attempting to process data..');
   processedData = [...rawData.transactions];
   console.log('>> Processed data [0] = ',processedData[0]);
 
-  // pull all the transactions, query API for receipts, and watch for result
-  // should be waiting?.. "await"
-  const result = await Promise.all(processedData.map(async (tx) => {
+  // pull all the transactions, query API for receipts, and return result
+  const result = Promise.all(processedData.map(async (tx) => {
     tx.receipt = await pullTxReceipt(tx.ethHash);
     return tx;
   }));
@@ -104,19 +101,22 @@ const processTxData = async (rawData) => {
 
 const pullTxReceipt = (txHash) => {
   return axios({
-    method: 'post',
+    method: 'get',
     url: 'https://api.harmony.one',
     headers: { 'Content-Type' : 'application/json' },
     data: JSON.stringify({
-        "jsonrpc": "2.0",
-        "method": "hmyv2_getTransactionReceipt",
-        "params": [txHash],
-        "id": 1
+      "jsonrpc" : "2.0",
+      "method" : "hmyv2_getTransactionReceipt",
+      "params": [ txHash ],
+      "id":1
       })
     })
-    .then(function (response) { return response.data; })
+    .then(function (response) { 
+      console.log('>> Get Transaction data response ', response.data);
+      return response.data; 
+    })
     .catch(function (error) {
-      console.log('>> There was an error pulling TX reciept:',txHash,' :',error);
+      console.log('>> There was an error pulling TX reciept:',txHash,' :',error.code);
       return error;
     })
 };
@@ -125,6 +125,10 @@ app.listen(3001, () => {
   console.log("Server running on port 3001");
  });
  
+
+//  curl -d '{
+  
+// }' -H "Content-Type:application/json" -X POST ""
 
 // var data = JSON.stringify({
 //   "jsonrpc": "2.0",
