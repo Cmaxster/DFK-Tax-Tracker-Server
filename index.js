@@ -71,9 +71,9 @@ app.get("/transactions/:address", (req, res, next) => {
         "id": 1
       })
     })
-    .then(function (response) {
+    .then(async function(response) {
       console.log('>> Axios get transactions SUCCESS --! ');
-      const transactionData = processTxData(response.data.result); 
+      const transactionData = await processTxData(response.data.result); 
       // console logging undefined despite having await on each promise..
       console.log('>> transactionData after processing : ',transactionData[0]);
       
@@ -86,7 +86,7 @@ app.get("/transactions/:address", (req, res, next) => {
 })
 
 // process data.. add receipt to transaction data..
-const processTxData = (rawData) => {
+const processTxData = async (rawData) => {
   console.log('>> Attempting to process data..');
   processedData = [...rawData.transactions];
   console.log('>> Processed data [0] = ',processedData[0]);
@@ -99,7 +99,7 @@ const processTxData = (rawData) => {
   return result;
 }
 
-const pullTxReceipt = (txHash) => {
+const pullTxReceipt = async (txHash) => {
   return axios({
     method: 'get',
     url: 'https://api.harmony.one',
