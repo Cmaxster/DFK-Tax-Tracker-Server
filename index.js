@@ -1,9 +1,7 @@
 const express = require('express');
-const unirest = require("unirest");
 const axios = require("axios");
 const abiDecoder = require('abi-decoder');
-var Web3 = require('web3');
-var cors = require('cors');
+const cors = require('cors');
 
 const app = express();
 
@@ -74,7 +72,6 @@ app.get("/transactions/:address", (req, res, next) => {
     .then(async function(response) {
       console.log('>> Axios get transactions SUCCESS --! ');
       const transactionData = await processTxData(response.data.result); 
-      // console logging undefined despite having await on each promise..
       console.log('>> transactionData after processing : ',transactionData[0]);
       
       res.send(transactionData);
@@ -94,11 +91,13 @@ const processTxData = async (rawData) => {
   // pull all the transactions, query API for receipts, and return result
   const result = Promise.all(processedData.map(async (tx) => {
     tx.receipt = await pullTxReceipt(tx.ethHash);
+    tx.method = await abiDecoder.decodeMethod(tx.input);
     return tx;
   }));
   return result;
 }
 
+// pull a transaction receipt from API
 const pullTxReceipt = async (txHash) => {
   return axios({
     method: 'get',
@@ -112,8 +111,8 @@ const pullTxReceipt = async (txHash) => {
       })
     })
     .then(function (response) { 
-      console.log('>> Get Transaction data response ', response.data);
-      return response.data; 
+      console.log('>> Get Transaction data response ', response.data.result);
+      return response.data.result; 
     })
     .catch(function (error) {
       console.log('>> There was an error pulling TX reciept:',txHash,' :',error.code);
@@ -121,38 +120,8 @@ const pullTxReceipt = async (txHash) => {
     })
 };
 
+// listen for calls..
 app.listen(3001, () => {
   console.log("Server running on port 3001");
  });
  
-
-//  curl -d '{
-  
-// }' -H "Content-Type:application/json" -X POST ""
-
-// var data = JSON.stringify({
-//   "jsonrpc": "2.0",
-//   "id": 1,
-//   "method": "hmyv2_getTransactionReceipt",
-//   "params": [
-//     "0xd324cc57280411dfac5a7ec2987d0b83e25e27a3d5bb5d3531262387331d692b"
-//   ]
-// });
-
-// var config = {
-//   method: 'get',
-//   url: 'https://api.harmony.one',
-//   headers: { 
-//     'Content-Type': 'application/json', 
-//     'Cookie': 'DO-LB="MTAuMTE2LjAuOTo4NTAw"'
-//   },
-//   data : data
-// };
-
-// axios(config)
-// .then(function (response) {
-//   console.log(JSON.stringify(response.data));
-// })
-// .catch(function (error) {
-//   console.log(error);
-// });
