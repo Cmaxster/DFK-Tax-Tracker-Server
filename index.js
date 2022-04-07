@@ -1,9 +1,11 @@
 const express = require('express');
 const axios = require("axios");
+const axiosRetry = require('axios-retry');
 const abiDecoder = require('abi-decoder');
 const cors = require('cors');
 
 const app = express();
+app.use(cors()) // cross domain policy
 
 // Defi Kingdoms API definitions
 const HeroesAbi = require('./assets/abi/Heroes.abi.json');
@@ -21,8 +23,6 @@ const JewelAbi = require('./assets/abi/Jewel.abi.json');
 const ProfileAbi = require('./assets/abi/Profile.abi.json');
 const USV3Abi = require('./assets/abi/UniswapV3.abi.json');
 const USV2Router = require('./assets/abi/IUniswapV2Router02.abi.json');
-
-app.use(cors()) // cross domain policy
 
 // Load up ABIs
 abiDecoder.addABI(HeroesAbi);
@@ -42,6 +42,14 @@ abiDecoder.addABI(USV3Abi);
 abiDecoder.addABI(USV2Router);
 
 var processedData = {};
+
+axiosRetry(axios, {
+  retries: 10, // number of retries
+  retryDelay: (retryCount) => {
+    console.log(`retry attempt: ${retryCount}`);
+    return retryCount * 2500; // time interval between retries
+  }
+});
 
 // decode an isolated piece of a transaction
 app.get("/decode/:hex", (req, res, next) => {
@@ -111,11 +119,12 @@ const pullTxReceipt = async (txHash) => {
       })
     })
     .then(function (response) { 
-      console.log('>> Get Transaction data response ', response.data.result);
+      console.log('>> Get Transaction data response ', response.data.result.logs[0]);
+      console.log('//////////////////////////////////////////////////////////')
       return response.data.result; 
     })
     .catch(function (error) {
-      console.log('>> There was an error pulling TX reciept:',txHash,' :',error.code);
+      console.log('>> There was an error pulling TX reciept:',txHash,' :',error);
       return error;
     })
 };
