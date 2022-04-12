@@ -2,7 +2,9 @@ const express = require('express');
 const axios = require("axios");
 const axiosRetry = require('axios-retry');
 const abiDecoder = require('abi-decoder');
+const { ethers } = require("ethers");
 const cors = require('cors');
+const {getProvider, getContractQuest } = require('./ethereum');
 
 const app = express();
 app.use(cors()) // cross domain policy
@@ -43,6 +45,8 @@ abiDecoder.addABI(USV2Router);
 
 var processedData = {};
 
+var completedQuests = [];
+
 axiosRetry(axios, {
   retries: 10, // number of retries
   retryDelay: (retryCount) => {
@@ -81,7 +85,60 @@ app.get("/transactions/:address", (req, res, next) => {
       console.log('>> Axios get transactions SUCCESS --! ');
       const transactionData = await processTxData(response.data.result); 
       console.log('>> transactionData after processing : ',transactionData[0]);
-      
+      console.log('>> Completed Quests: ', completedQuests.length);
+
+
+      // testing log decode method
+      const ifaceQuest = new ethers.utils.Interface(QuestCoreV2Abi);
+      const questEvent = completedQuests[0].receipt.logs[0];
+      try {
+        // run through all the logs of a quest complete event to see if anything can be decoded..
+        const decodedEvents = completedQuests[0].receipt.logs.map(
+          (compQuest, index) => {
+            let results;
+            try {
+              results = ifaceQuest.parseLog(compQuest);  
+              console.log(`>> success! quest event decoded as follows: ${JSON.stringify(results)}`)
+
+            } catch (err){
+              console.log(`>> Error! Could not parse log for QuestEvent #${index}`)
+              return err;
+            }
+            return result;
+          }
+        )
+        console.log(`
+        ////////////////////////////////////////////////////////////////////////////////////////
+        >> Decoded quest log test: ${decodedEvents}`);
+        try{
+          const questRewards = Object.entries(results) // .filter([key, value]);
+          
+          //results.filter(result => Object.keys(result) === 'QuestReward');
+
+          /* const result = Object.entries(data)
+            .filter(([key, value]) => key.endsWith('A'))
+            .map(([key, value]) => value)
+            console.log(result) // [{id: 'idA', markdown: 'markdownA'}]
+          */
+
+          console.log(`////////////////////////////////////////////////////////////////////////////
+          Quest Rewards = ${questRewards}`)
+
+        }catch(err){
+          console.log(`///////////////////////////////////////////////////////////////////////////
+          >> Error! could not filter quest rewards.. Error:${err}
+          `);
+        }
+      } catch (err) {
+        console.log(`
+        >> something went wrong when attempting to decode quest log..
+        
+        >> error logged as: ${err}
+
+        `)
+      }
+
+
       res.send(transactionData);
     }).catch(function (error) {
       console.log(">> Axios encountered an error when fetching transactions: ",error);
@@ -94,12 +151,22 @@ app.get("/transactions/:address", (req, res, next) => {
 const processTxData = async (rawData) => {
   console.log('>> Attempting to process data..');
   processedData = [...rawData.transactions];
-  console.log('>> Processed data [0] = ',processedData[0]);
 
-  // pull all the transactions, query API for receipts, and return result
-  const result = Promise.all(processedData.map(async (tx) => {
+  // run through all the transactions, query API for receipts, and convert data to human readable format
+  const result = Promise.all(processedData.map(async (tx, index) => {
+    console.log(`>> [${index}] processing tx ${tx.ethHash}`)
     tx.receipt = await pullTxReceipt(tx.ethHash);
     tx.method = await abiDecoder.decodeMethod(tx.input);
+    try { //try to gather up all the completed quest transactions..
+      if(tx.method){
+        if(tx.method.name === "completeQuest") {
+          console.log(`>> [${index}] Quest Transaction Identified..'`)
+          completedQuests.push(tx)
+        }
+      }
+    } catch (err) {
+      console.log(`>> [${index}] there was a problem reading tx.method ${err}. transaction data:${tx}`)
+    }
     return tx;
   }));
   return result;
@@ -119,18 +186,20 @@ const pullTxReceipt = async (txHash) => {
       })
     })
     .then(function (response) { 
-      console.log('>> Get Transaction data response ', response.data.result.logs[0]);
-      console.log('//////////////////////////////////////////////////////////')
+      //console.log('>> Get Transaction data response ', response.data.result.logs[0]);
+      //console.log('//////////////////////////////////////////////////////////')
       return response.data.result; 
     })
     .catch(function (error) {
-      console.log('>> There was an error pulling TX reciept:',txHash,' :',error);
+      //console.log('>> There was an error pulling TX reciept:',txHash,' :',error);
       return error;
     })
 };
 
 // listen for calls..
 app.listen(3001, () => {
+  console.clear();
   console.log("Server running on port 3001");
+
  });
  
