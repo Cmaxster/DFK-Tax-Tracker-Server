@@ -5,6 +5,9 @@ const abiDecoder = require('abi-decoder');
 const { ethers } = require("ethers");
 const cors = require('cors');
 const {getProvider, getContractQuest } = require('./ethereum');
+const {QUEST_REWARDS} = require('./assets/addresses/addresses')
+
+const savedData = require('./sample_wallet_data.json');
 
 const app = express();
 app.use(cors()) // cross domain policy
@@ -45,7 +48,7 @@ abiDecoder.addABI(USV2Router);
 
 var processedData = {};
 
-var completedQuests = [];
+//var completedQuests = [];
 
 axiosRetry(axios, {
   retries: 10, // number of retries
@@ -61,8 +64,10 @@ app.get("/decode/:hex", (req, res, next) => {
   res.send(decodedData);
 })
 
+
 // pull wallet transactions
 app.get("/transactions/:address", (req, res, next) => {
+/*
   axios({
     method: 'post',
     url: 'https://api.harmony.one',
@@ -86,66 +91,15 @@ app.get("/transactions/:address", (req, res, next) => {
       const transactionData = await processTxData(response.data.result); 
       console.log('>> transactionData after processing : ',transactionData[0]);
       console.log('>> Completed Quests: ', completedQuests.length);
-
-
-      // testing log decode method
-      const ifaceQuest = new ethers.utils.Interface(QuestCoreV2Abi);
-      const questEvent = completedQuests[0].receipt.logs[0];
-      try {
-        // run through all the logs of a quest complete event to see if anything can be decoded..
-        const decodedEvents = completedQuests[0].receipt.logs.map(
-          (compQuest, index) => {
-            let results;
-            try {
-              results = ifaceQuest.parseLog(compQuest);  
-              console.log(`>> success! quest event decoded as follows: ${JSON.stringify(results)}`)
-
-            } catch (err){
-              console.log(`>> Error! Could not parse log for QuestEvent #${index}`)
-              return err;
-            }
-            return result;
-          }
-        )
-        console.log(`
-        ////////////////////////////////////////////////////////////////////////////////////////
-        >> Decoded quest log test: ${decodedEvents}`);
-        try{
-          const questRewards = Object.entries(results) // .filter([key, value]);
-          
-          //results.filter(result => Object.keys(result) === 'QuestReward');
-
-          /* const result = Object.entries(data)
-            .filter(([key, value]) => key.endsWith('A'))
-            .map(([key, value]) => value)
-            console.log(result) // [{id: 'idA', markdown: 'markdownA'}]
-          */
-
-          console.log(`////////////////////////////////////////////////////////////////////////////
-          Quest Rewards = ${questRewards}`)
-
-        }catch(err){
-          console.log(`///////////////////////////////////////////////////////////////////////////
-          >> Error! could not filter quest rewards.. Error:${err}
-          `);
-        }
-      } catch (err) {
-        console.log(`
-        >> something went wrong when attempting to decode quest log..
-        
-        >> error logged as: ${err}
-
-        `)
-      }
-
-
       res.send(transactionData);
     }).catch(function (error) {
       console.log(">> Axios encountered an error when fetching transactions: ",error);
       return error;
     });
-    
+  */
+  sortQuestData(savedData);
 })
+
 
 // process data.. add receipt to transaction data..
 const processTxData = async (rawData) => {
@@ -157,16 +111,16 @@ const processTxData = async (rawData) => {
     console.log(`>> [${index}] processing tx ${tx.ethHash}`)
     tx.receipt = await pullTxReceipt(tx.ethHash);
     tx.method = await abiDecoder.decodeMethod(tx.input);
-    try { //try to gather up all the completed quest transactions..
-      if(tx.method){
-        if(tx.method.name === "completeQuest") {
-          console.log(`>> [${index}] Quest Transaction Identified..'`)
-          completedQuests.push(tx)
-        }
-      }
-    } catch (err) {
-      console.log(`>> [${index}] there was a problem reading tx.method ${err}. transaction data:${tx}`)
-    }
+    // try { //try to gather up all the completed quest transactions..
+    //   if(tx.method){
+    //     if(tx.method.name === "completeQuest") {
+    //       console.log(`>> [${index}] Quest Transaction Identified..'`)
+    //       completedQuests.push(tx)
+    //     }
+    //   }
+    // } catch (err) {
+    //   console.log(`>> [${index}] there was a problem reading tx.method ${err}. transaction data:${tx}`)
+    // }
     return tx;
   }));
   return result;
@@ -196,10 +150,73 @@ const pullTxReceipt = async (txHash) => {
     })
 };
 
+const sortQuestData = (data) => {
+
+  console.log('>> data.method.name = ',data[0])
+ 
+  let completedQuests = data.filter(tx => tx.method).filter(tx => tx.method.name === "completeQuest")
+
+  console.log(`>> Completed Quests Array length is ${completedQuests.length}`)
+
+  // testing log decode method
+  const ifaceQuest = new ethers.utils.Interface(QuestCoreV2Abi);
+  // const questEvent = completedQuests[0].receipt.logs[0];
+  try {
+    var ethHash = completedQuests[12].hash;
+    // run through all the logs of a quest complete event to see if anything can be decoded..
+    const decodedEvents = completedQuests[2].receipt.logs.map(
+      (compQuestEvt, index) => {
+        let results;
+        try {
+          console.log('>> compQuestEvt = ',compQuestEvt.address)
+          results = ifaceQuest.parseLog(compQuestEvt);  
+          // console.log(`>> success! quest event decoded as follows: ${JSON.stringify(results)}
+          // ...................................................................................`)
+
+        } catch (err){
+          // console.log(`>> Error! Could not parse log for QuestEvent #${index}
+          // ..................................................................................`)
+          return err;
+        }
+        return results;
+      }
+    )
+    // console.log(`
+    // ////////////////////////////////////////////////////////////////////////////////////////
+    // >> Decoded quest log test: ${JSON.stringify(decodedEvents)}`);
+
+    const questRewards = decodedEvents.filter(evt => evt.name).filter(evt => evt.name === "QuestReward")
+    console.log(`
+    ###########################################################################################################
+    ###### QUEST: ${ethHash}     
+    ###########################################################################################################
+    `);
+    //array1.forEach((element, i) => console.log(element));
+    questRewards.forEach((rewardElement, i) => {
+      console.log(`
+     ///// QUEST: ${ethHash} //////////////////////////////////////////////////////////////////////////////
+     Decoded Arguments For Log #${i}:
+      ARGS[0] : ${rewardElement.args[0]} <- quest number
+      ARGS[1] : ${rewardElement.args[1]} <- wallet address
+      ARGS[2] : ${rewardElement.args[2]} <- hero ID
+      ARGS[3] : ${QUEST_REWARDS[rewardElement.args[3]]} (${rewardElement.args[3]}) <- reward
+      ARGS[4] : ${rewardElement.args[4]} < - amount received
+      
+      `);
+    })
+  } catch (err) {
+    console.log(`
+    >> something went wrong when attempting to decode quest log..
+    
+    >> error logged as: ${err}
+
+    `)
+  }
+}
+
 // listen for calls..
 app.listen(3001, () => {
   console.clear();
   console.log("Server running on port 3001");
-
  });
  
