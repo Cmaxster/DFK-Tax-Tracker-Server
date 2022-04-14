@@ -1,4 +1,7 @@
-
+/**
+ * A collection of utility methods..
+ *   
+ */
 
 exports.epochToUtc = (utcSeconds) => {
     let d = new Date(0);

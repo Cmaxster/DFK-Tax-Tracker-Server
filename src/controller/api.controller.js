@@ -7,6 +7,15 @@ const savedData = require('../../assets/sample_wallet_data.json');
 
 axiosRetry(axios, config.getRetryConfig());
 
+/**
+ * Fetch transaction data from API
+ *
+ * @param {string=} wallet a wallet hex address
+ *    provider (wallet).
+ * @return {Promise<Object>} the transaction data
+ *    
+ *    
+ */
 exports.pullTxData = async (wallet) => {
   return axios(config.axConfig('transactions', wallet))
   .then(function(response) {
