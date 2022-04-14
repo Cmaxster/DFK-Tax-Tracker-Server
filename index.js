@@ -152,8 +152,6 @@ const pullTxReceipt = async (txHash) => {
 
 const sortQuestData = (data) => {
 
-  console.log('>> data.method.name = ',data[0])
- 
   let completedQuests = data.filter(tx => tx.method).filter(tx => tx.method.name === "completeQuest")
 
   console.log(`>> Completed Quests Array length is ${completedQuests.length}`)
@@ -161,49 +159,46 @@ const sortQuestData = (data) => {
   // testing log decode method
   const ifaceQuest = new ethers.utils.Interface(QuestCoreV2Abi);
   // const questEvent = completedQuests[0].receipt.logs[0];
-  try {
-    var ethHash = completedQuests[12].hash;
-    // run through all the logs of a quest complete event to see if anything can be decoded..
-    const decodedEvents = completedQuests[2].receipt.logs.map(
-      (compQuestEvt, index) => {
-        let results;
-        try {
-          console.log('>> compQuestEvt = ',compQuestEvt.address)
-          results = ifaceQuest.parseLog(compQuestEvt);  
-          // console.log(`>> success! quest event decoded as follows: ${JSON.stringify(results)}
-          // ...................................................................................`)
-
-        } catch (err){
-          // console.log(`>> Error! Could not parse log for QuestEvent #${index}
-          // ..................................................................................`)
-          return err;
+  try { //try to decode quests
+    const decodedQuests = completedQuests.map((completedQuest, i) => {
+      var txDate = completedQuest.timestamp,
+        txHash = completedQuest.hash;
+        
+      const decodedEvents = completedQuest.receipt.logs.map(
+        (compQuestEvt) => {
+          let results;
+          try { results = ifaceQuest.parseLog(compQuestEvt); } 
+          catch (err){ 
+            console.log(compQuestEvt)
+            console.log(`>> error decoding event #${i} hash:${txHash} date:${epochToUtc(txDate)}
+error code: ${err}`)
+            return err; 
+          }
+          return results;
         }
-        return results;
-      }
-    )
-    // console.log(`
-    // ////////////////////////////////////////////////////////////////////////////////////////
-    // >> Decoded quest log test: ${JSON.stringify(decodedEvents)}`);
+      ) // decodedEvents map end
+        
+      const questRewards = decodedEvents.filter(evt => evt.name).filter(evt => evt.name === "QuestReward")
+        
+        console.log(`
+###########################################################################################################
+###### QUEST #: ${i} DATE: ${epochToUtc(txDate)} HASH: ${txHash}      
+###########################################################################################################
+        `);
 
-    const questRewards = decodedEvents.filter(evt => evt.name).filter(evt => evt.name === "QuestReward")
-    console.log(`
-    ###########################################################################################################
-    ###### QUEST: ${ethHash}     
-    ###########################################################################################################
-    `);
-    //array1.forEach((element, i) => console.log(element));
-    questRewards.forEach((rewardElement, i) => {
-      console.log(`
-     ///// QUEST: ${ethHash} //////////////////////////////////////////////////////////////////////////////
-     Decoded Arguments For Log #${i}:
-      ARGS[0] : ${rewardElement.args[0]} <- quest number
-      ARGS[1] : ${rewardElement.args[1]} <- wallet address
-      ARGS[2] : ${rewardElement.args[2]} <- hero ID
-      ARGS[3] : ${QUEST_REWARDS[rewardElement.args[3]]} (${rewardElement.args[3]}) <- reward
-      ARGS[4] : ${rewardElement.args[4]} < - amount received
-      
-      `);
-    })
+        //console.log('>> Quest Reward Events: ',questRewards)
+        questRewards.forEach((rewardElement, i) => {
+          console.log(`/////////////// QUEST: ${txHash} 
+        Decoded Arguments For Log #${i} on ${epochToUtc(txDate)}:
+          ARGS[0] : ${rewardElement.args[0]} <- quest number
+          ARGS[1] : ${rewardElement.args[1]} <- wallet address
+          ARGS[2] : ${rewardElement.args[2]} <- hero ID
+          ARGS[3] : ${QUEST_REWARDS[rewardElement.args[3]]} (${rewardElement.args[3]}) <- reward
+          ARGS[4] : ${rewardElement.args[4]} < - amount received
+          `);
+        })
+
+    })//decodedQuests map end
   } catch (err) {
     console.log(`
     >> something went wrong when attempting to decode quest log..
@@ -211,7 +206,14 @@ const sortQuestData = (data) => {
     >> error logged as: ${err}
 
     `)
-  }
+  } // try/catch end    
+} // sortQuestData end
+
+const epochToUtc = (utcSeconds) => {
+  let d = new Date(0);
+  var options = { hour12: false };
+  d.setUTCSeconds(utcSeconds);
+  return d.toLocaleString('en-US', options);
 }
 
 // listen for calls..
