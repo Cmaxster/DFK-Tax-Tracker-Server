@@ -1,6 +1,7 @@
 const { pullTxData, pullTxReceipt } = require ('./api.Controller');
 const { decodeTxMethod } = require ('../decode/ethereum.decoder');
-const { sortQuestData } = require('../contracts/quest');
+const { questContract } = require('../contracts/quest.contract');
+const { transaction } = require ('./transaction.Controller');
 
 /**
  * Fetch and process transaction data from API
@@ -14,8 +15,8 @@ const { sortQuestData } = require('../contracts/quest');
 exports.fetchTxData = async (wallet) => {
   const txData = await pullTxData(wallet);
   const processedData = await processTxData(txData);
-  const sortedQuestData = sortQuestData(processedData);
-  return processedData;
+  const responseData = buildResponseObject();
+  return responseData;
 }
 
 /**
@@ -29,8 +30,6 @@ exports.fetchTxData = async (wallet) => {
  */
 const processTxData = async (rawData) => { 
   
-  console.log('>> [process.controller] pre-processing raw data..');
-  
   const result = Promise.all(rawData.transactions.map(async (tx, index) => {
     console.log(`>> [process.controller] [${index}] processing tx ${tx.ethHash}`)
     tx.receipt = await pullTxReceipt(tx.ethHash);
@@ -41,3 +40,22 @@ const processTxData = async (rawData) => {
   return result;
 }
 
+/**
+ * Build a transaction to be returned
+ *
+ * @return {Object} the returned data with sorted data
+ *    
+ *    
+ */
+const buildResponseObject = (processedData) => {
+  rObj = [];
+  processedData.forEach((tx, i) => {
+    const handleTransaction = {
+      'CompleteQuest': (tx) => questContract.completedQuestHandler(tx),
+      'default': (tx) => transaction.defaultHandler(tx)
+    };
+
+    let txCollection = handleTransaction[tx.method](tx) || handleTransaction['default'](tx); //returns an array!
+    txCollection.forEach((tx) => rObj.push(tx));
+  })
+}
