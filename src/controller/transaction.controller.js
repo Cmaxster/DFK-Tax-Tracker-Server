@@ -43,7 +43,7 @@ exports.buildTransaction = (
     return builtTransaction;
 }
 
-exports.buildDefault = (tx) => {
-    const defaultBuild = [this.buildTransaction(tx.date, tx.hash, tx.method, null, null, null, null, null, null, tx.receipt.gasUsed, null)]
+exports.defaultHandler = (tx) => {
+    const defaultBuild = [this.buildTransaction(tx.timestamp, tx.hash, tx.method, "N/A", 0, 0, "N/A", 0, 0, tx.receipt.gasUsed, 0)]
     return defaultBuild;
 } 

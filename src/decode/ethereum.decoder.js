@@ -88,7 +88,9 @@ exports.providerError = async () => {};
 
 
 exports.decodeTxMethod = (methodHex) => {// req.params.hex
-  return abiDecoder.decodeMethod(methodHex);
+  let decodedTx = abiDecoder.decodeMethod(methodHex);
+  if(decodedTx === undefined) decodedTx = {name:'default'};
+  return decodedTx;
 }
 
 // const ifaceConsumable = new ethers.utils.Interface(consumableAbi);

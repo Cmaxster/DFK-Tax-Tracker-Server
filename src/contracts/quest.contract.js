@@ -2,6 +2,7 @@ const {QUEST_REWARD_LIST} = require('../../assets/addresses/addresses')
 const {epochToUtc} = require('../util/utilities');
 const { ethers } = require('ethers');
 const abi_questing = require('../../assets/abi/QuestCoreV2.abi.json');
+const { buildTransaction } = require ('../controller/transaction.Controller');
 
 /**
  * Handle contract requests related to questing..
@@ -16,6 +17,7 @@ exports.completedQuestHandler = (tx) => {
 
     const tx_date = tx.timestamp;
     const tx_hash = tx.hash;
+    const tx_method = tx.method;
 
     const interface_quest = new ethers.utils.Interface(abi_questing);
 
@@ -24,7 +26,7 @@ exports.completedQuestHandler = (tx) => {
         let results;
         try { results = interface_quest.parseLog(tx_log); } 
         catch (err){ 
-          console.log(`>> error decoding event #${i} hash:${tx_hash} date:${epochToUtc(tx_date)}\nerror code: ${err}`)
+          console.log(`>> error decoding event hash:${tx_hash} date:${epochToUtc(tx_date)}\nerror code: ${err}`)
           return err; 
         }
         return results;
@@ -32,22 +34,42 @@ exports.completedQuestHandler = (tx) => {
       
     const tx_rewards = tx_events.filter(evt => evt.name).filter(evt => evt.name === "QuestReward")
     
-    const splitTransactions = [];
+    
 
-    console.log(`###########################################################################################################\n###### QUEST #: ${i} DATE: ${epochToUtc(tx_date)} HASH: ${tx_hash}\n###########################################################################################################`);
-    tx_rewards.forEach((rewardElement, i) => {
-    console.log(`/////////////// QUEST: ${txHash} 
-    Decoded Arguments For Log #${i} on ${epochToUtc(txDate)}:
-    ARGS[0] : ${rewardElement.args[0]} <- quest number
-    ARGS[1] : ${rewardElement.args[1]} <- wallet address
-    ARGS[2] : ${rewardElement.args[2]} <- hero ID
-    ARGS[3] : ${QUEST_REWARD_LIST[rewardElement.args[3]]} (${rewardElement.args[3]}) <- reward
-    ARGS[4] : ${rewardElement.args[4]} < - ???
-    ARGS[4] : ${rewardElement.args[5]} < - ???
-    ARGS[4] : ${rewardElement.args[6]} < - amount received?
-    `);
+    console.log(`###########################################################################################################\n###### DATE: ${epochToUtc(tx_date)} HASH: ${tx_hash}\n###########################################################################################################`);
+    const formattedTransactions = tx_rewards.map((rewardElement, i) => {
+        
+        const questRewardToken = QUEST_REWARD_LIST[rewardElement.args[3]];
+
+        console.log(`/////////////// QUEST: ${tx_hash} 
+        Decoded Arguments For Log #${i} on ${epochToUtc(tx_date)}:
+        ARGS[0] : ${rewardElement.args[0]} <- quest number
+        ARGS[1] : ${rewardElement.args[1]} <- wallet address
+        ARGS[2] : ${rewardElement.args[2]} <- hero ID
+        ARGS[3] : ${QUEST_REWARD_LIST[rewardElement.args[3]]} (${rewardElement.args[3]}) <- reward
+        ARGS[4] : ${rewardElement.args[4]} <- ???
+        ARGS[4] : ${rewardElement.args[5]} <- ???
+        ARGS[4] : ${rewardElement.args[6]} <- amount received?
+        `);
+
+        return buildTransaction(
+                                tx_date,
+                                tx_hash,
+                                tx_method,
+                                questRewardToken,
+                                rewardElement.args[6],
+                                0,
+                                "N/A",
+                                0,
+                                0,
+                                0, //gasfee
+                                0
+                                )
+
     })
 
+
+    return formattedTransactions;
     /*
     { 
         date,
@@ -63,6 +85,8 @@ exports.completedQuestHandler = (tx) => {
         gasFeeFiat
     }
     */
+
+
 
 
   } 

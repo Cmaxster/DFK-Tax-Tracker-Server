@@ -1,7 +1,7 @@
-const { pullTxData, pullTxReceipt } = require ('./api.Controller');
+const { pullTxData, pullTxReceipt } = require ('./api.controller');
 const { decodeTxMethod } = require ('../decode/ethereum.decoder');
-const { questContract } = require('../contracts/quest.contract');
-const { transaction } = require ('./transaction.Controller');
+const questContract = require('../contracts/quest.contract');
+const transaction = require ('./transaction.controller');
 
 /**
  * Fetch and process transaction data from API
@@ -15,7 +15,7 @@ const { transaction } = require ('./transaction.Controller');
 exports.fetchTxData = async (wallet) => {
   const txData = await pullTxData(wallet);
   const processedData = await processTxData(txData);
-  const responseData = buildResponseObject();
+  const responseData = await buildResponseObject(processedData);
   return responseData;
 }
 
@@ -47,15 +47,17 @@ const processTxData = async (rawData) => {
  *    
  *    
  */
-const buildResponseObject = (processedData) => {
-  rObj = [];
+const buildResponseObject = async (processedData) => {
+  const rObj = [];
   processedData.forEach((tx, i) => {
+    //console.log(tx);
     const handleTransaction = {
-      'CompleteQuest': (tx) => questContract.completedQuestHandler(tx),
-      'default': (tx) => transaction.defaultHandler(tx)
+      completeQuest: (tx) => questContract.completedQuestHandler(tx),
+      default: (tx) => transaction.defaultHandler(tx)
     };
-
-    let txCollection = handleTransaction[tx.method](tx) || handleTransaction['default'](tx); //returns an array!
+    console.log('>> [process.controller] (buildResponseObject) tx.method = ',tx.method.name)
+    let txCollection = handleTransaction[tx.method.name] ? handleTransaction[tx.method.name](tx) : handleTransaction['default'](tx); //returns an array!
     txCollection.forEach((tx) => rObj.push(tx));
   })
+  return rObj;
 }
