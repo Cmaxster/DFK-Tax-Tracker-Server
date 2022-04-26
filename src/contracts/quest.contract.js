@@ -26,16 +26,14 @@ exports.completedQuestHandler = (tx) => {
         let results;
         try { results = interface_quest.parseLog(tx_log); } 
         catch (err){ 
-          console.log(`>> error decoding event hash:${tx_hash} date:${epochToUtc(tx_date)}\nerror code: ${err}`)
+          console.log(`>> error decoding event hash:${tx_hash} date:${epochToUtc(tx_date)}\nerror code: ${err}`);
           return err; 
         }
         return results;
     });          
       
-    const tx_rewards = tx_events.filter(evt => evt.name).filter(evt => evt.name === "QuestReward")
+    const tx_rewards = tx_events.filter(evt => evt.name).filter(evt => evt.name === "QuestReward");
     
-    
-
     console.log(`###########################################################################################################\n###### DATE: ${epochToUtc(tx_date)} HASH: ${tx_hash}\n###########################################################################################################`);
     const formattedTransactions = tx_rewards.map((rewardElement, i) => {
         
@@ -55,38 +53,18 @@ exports.completedQuestHandler = (tx) => {
         return buildTransaction(
                                 tx_date,
                                 tx_hash,
-                                tx_method,
-                                questRewardToken,
-                                rewardElement.args[6],
-                                0,
-                                "N/A",
-                                0,
-                                0,
-                                0, //gasfee
-                                0
+                                tx_method, 
+                                questRewardToken, // reward
+                                rewardElement.args[6], // reward amount
+                                0, // reward fiat value
+                                "N/A", // token out
+                                0, // amount out
+                                0, // fiat out
+                                0, // gas
+                                0 // gas fiat
                                 )
 
     })
 
-
     return formattedTransactions;
-    /*
-    { 
-        date,
-        hash,
-        method,
-        intoWalletToken,
-        intoWalletAmount,
-        intoWalletFiat,
-        outOfWalletToken,
-        outOfWalletAmount,
-        outofWalletFiat,
-        gasFee,
-        gasFeeFiat
-    }
-    */
-
-
-
-
   } 

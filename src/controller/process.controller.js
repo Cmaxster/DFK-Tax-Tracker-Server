@@ -34,6 +34,7 @@ const processTxData = async (rawData) => {
     console.log(`>> [process.controller] [${index}] processing tx ${tx.ethHash}`)
     tx.receipt = await pullTxReceipt(tx.ethHash);
     tx.method = await decodeTxMethod(tx.input);
+    //pull coin price here?
     return tx;
   }));
   

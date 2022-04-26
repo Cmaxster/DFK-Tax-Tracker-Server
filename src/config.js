@@ -1,9 +1,15 @@
 exports.config = {
   gqlEndpoint:
     'https://defi-kingdoms-community-api-gateway-co06z8vi.uc.gateway.dev/graphql',
+  localizations: [
+    {country:"canada", currency:"cad"},
+    {country:"united states", currency:"usd"}
+  ],
   axConfig: (typeOf, param) => {
     let dataObj;
+    let endpoint;
     if(typeOf === "transactions") {
+      url = "https://api.harmony.one";
       dataObj = {
                   "jsonrpc": "2.0",
                   "method": "hmyv2_getTransactionsHistory",
@@ -18,18 +24,27 @@ exports.config = {
                   "id": 1
                 }
     } else if(typeOf === "receipts") {
+      url = "https://api.harmony.one";
       dataObj = {
                   "jsonrpc" : "2.0",
                   "method" : "hmyv2_getTransactionReceipt",
                   "params": [ param ],
                   "id":1
                 }
+    } else if(typeOf === "coin_price") {
+      url = `https://api.coingecko.com/api/v3/coins/${param.coin}/history?date=${param.date}&localization=false`;
+      console.log(`>> coin fetch url = https://api.coingecko.com/api/v3/coins/${param.coin}/history?date=${param.date}&localization=false`);
+      dataObj = null;
     }
-    return {
-      method: 'get',
-      url: 'https://api.harmony.one',
-      headers: { 'Content-Type' : 'application/json' },
-      data: JSON.stringify(dataObj)
+    if(dataObj){
+      return {
+        method: 'get',
+        url: endpoint,
+        headers: { 'Content-Type' : 'application/json' },
+        data: JSON.stringify(dataObj)
+      }
+    } else {
+      return { method: 'get', url: endpoint, headers: { 'Content-Type' : 'application/json' } }
     }
   },
   getRetryConfig: () => {

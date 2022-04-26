@@ -11,8 +11,7 @@
  * @param {number} outOfWalletFiat - the amount of token disposed expressed in fiat dollars (default:USD)
  * @param {number} gasFee - the amount of gas paid in native token ($ONE)
  * @param {number} gasFeeFiat - gas fee expressed in fiat (default:USD)
- *    
- *    
+ *     
  */
 exports.buildTransaction = (
     tx_date,
@@ -28,8 +27,8 @@ exports.buildTransaction = (
     gasFeeFiat
 ) => {
     const builtTransaction = {
-        date:tx_date,
-        hash:tx_hash || "N/A",
+        date: tx_date,
+        hash: tx_hash || "N/A",
         method:tx_method || "N/A",
         tokenIn: intoWalletToken || "N/A",
         inVal: intoWalletAmount || null,

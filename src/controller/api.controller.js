@@ -18,9 +18,7 @@ axiosRetry(axios, config.getRetryConfig());
  */
 exports.pullTxData = async (wallet) => {
   return axios(config.axConfig('transactions', wallet))
-  .then(function(response) {
-    return response.data.result
-  })
+  .then(function(response) { return response.data.result })
   .catch(function (error) {
     console.log(">> [Api.controller] encountered an error when fetching transactions: ",error);
     return error;
@@ -39,6 +37,15 @@ exports.pullTxReceipt = async (txHash) => {
   })
 };
 
+exports.pullCoinPrice = async (coinCode, epochSeconds) => {
+  return axios(config.axConfig('coin_price', {coin:coinCode, date:epochToDDMMYYYY(epochSeconds)}))
+  .then(function(response) { return response.data.result })
+  .catch(function (error) {
+    console.log(">> [Api.controller] encountered an error when fetching coin price: ",error);
+    return error;
+  });
+  //https://api.coingecko.com/api/v3/coins/{0}/history?date={1}&localization=false
+}
 
 
   
